@@ -1,8 +1,8 @@
 import zoneinfo
 from datetime import datetime
 from fastapi import FastAPI,HTTPException
-from models import Customer, Transaction, Invoice
-
+from models import Customer, Transaction, Invoice, CustomerCreate
+from db import SessionDep
 
 
 
@@ -43,10 +43,29 @@ async def get_current_time(format: str):
 
     return {"time": time_str, "format": f"{format}-hour"}
 
-@app.post('/customers') # esta en mayuscula por que es una recomendacion cuando se crea una API rest
-async def create_customer(customer_data: Customer):
 
-    return customer_data
+
+db_customers: list[Customer] = []
+
+@app.post('/customers', response_model=Customer) # esta en mayuscula por que es una recomendacion cuando se crea una API rest
+async def create_customer(customer_data: CustomerCreate, session: SessionDep):
+    customer = Customer.model_validate(customer_data.model_dump()) #
+    db_customers.append(customer)
+    customer.id = len(db_customers)
+    return customer
+
+@app.get('/customers',response_model=list[Customer])
+async def list_customer():
+    return db_customers
+
+@app.get('/get_customer/{id}',response_model=Customer)
+async def get_customer(id : int):
+    for customer in db_customers:
+        if(customer.id == id):
+            return customer
+    return None
+
+
 
 @app.post('/transactions') # esta en mayuscula por que es una recomendacion cuando se crea una API rest
 async def create_transaction(transaction_data: Transaction):
